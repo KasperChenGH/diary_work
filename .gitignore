@@ -1,0 +1,5 @@
+.env
+.claude/mcp.json
+.claude/settings.local.json
+superpowers/
+node_modules/

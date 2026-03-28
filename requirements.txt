@@ -1,0 +1,26 @@
+# Python >= 3.6 required (f-strings used throughout)
+
+# --- Python packages ---
+requests>=2.31.0          # HTTP client for Zotero & Obsidian REST APIs
+urllib3>=2.0.0             # SSL/TLS handling (self-signed cert for Obsidian)
+
+# --- Node.js / npm (required for MCP) ---
+# Node.js + npm/npx must be installed
+# @notionhq/notion-mcp-server  (auto-installed via npx -y at runtime)
+
+# --- External applications ---
+# Zotero desktop app           (source library, API at api.zotero.org)
+# Obsidian desktop app          (must be running with Local REST API plugin enabled)
+#   - Plugin: "Local REST API"  (community plugin, provides REST endpoint on localhost:27124)
+
+# --- Cloud services ---
+# Notion account + internal integration  (MCP server handles API calls)
+# Heptabase account (optional)           (no write API, manual use only)
+
+# --- Environment variables (in .env) ---
+# NOTION_API_SECRET   — from https://www.notion.so/my-integrations
+# ZOTERO_API_KEY      — from https://www.zotero.org/settings/keys/new
+# ZOTERO_USER_ID      — from https://www.zotero.org/settings/keys
+# OBSIDIAN_API_KEY    — from Obsidian > Settings > Local REST API plugin
+# OBSIDIAN_HOST       — default: https://127.0.0.1
+# OBSIDIAN_PORT       — default: 27124
