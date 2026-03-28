@@ -1,5 +1,11 @@
+# Secrets — never commit actual keys
 .env
-.claude/mcp.json
+
+# Local Claude Code settings (machine-specific)
 .claude/settings.local.json
+
+# External framework (cloned repo, not our code)
 superpowers/
+
+# npm dependencies (installed at runtime via npx)
 node_modules/
