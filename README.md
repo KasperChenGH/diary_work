@@ -103,17 +103,45 @@ The default mode. Claude Code handles Q&A, summarization, format conversion, fil
 - **Notion** account with an [internal integration](https://www.notion.so/my-integrations)
 - **Heptabase** account (optional, manual use only)
 
-## Setup
+## Setup After Cloning
 
-### 1. Install Python dependencies
+After you clone this repo, some files are excluded from git for security and portability. Follow these steps to get everything running:
+
+### Step 1: Clone and enter the project
+
+```bash
+git clone https://github.com/KasperChenGH/diary_work.git Daily_Agent
+cd Daily_Agent
+```
+
+### Step 2: Create your `.env` from the template
+
+The repo includes `.env.example` with empty API keys. Copy it to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+### Step 3: Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Configure API keys
+### Step 4: Create Claude Code local settings
 
-Copy `.env` and fill in your credentials:
+The `.claude/mcp.json` is already included (Notion MCP config). You just need the local settings file:
+
+```bash
+# Create settings file (Claude Code will populate it on first run)
+echo '{}' > .claude/settings.local.json
+```
+
+Or just open Claude Code in this directory — it will create the file automatically.
+
+### Step 5: Configure API keys
+
+Fill in your `.env` with your credentials:
 
 | Variable | Where to get it |
 |----------|----------------|
@@ -124,12 +152,29 @@ Copy `.env` and fill in your credentials:
 
 Or type `project_setup` in Claude Code to be guided through the full setup interactively (system checks, dependency install, API keys, connection tests).
 
-### 3. Verify connections
+### Step 6: Verify connections
 
 ```bash
 python zotero/api.py recent 1       # Test Zotero API
 python obsidian/api.py status        # Test Obsidian Local REST API (Obsidian must be running)
 ```
+
+### Step 7 (Optional): Install superpowers framework
+
+```bash
+git clone https://github.com/obra/superpowers.git superpowers
+```
+
+### What's included vs what you create locally
+
+| File | In repo? | Notes |
+|------|----------|-------|
+| `.env.example` | Yes | Template with empty keys |
+| `.env` | **No** — create from `.env.example` | Your actual API keys (never committed) |
+| `.claude/mcp.json` | Yes | Notion MCP server config |
+| `.claude/settings.local.json` | **No** — auto-created by Claude Code | Machine-specific permissions |
+| `superpowers/` | **No** — optional clone | External development framework |
+| `node_modules/` | **No** — installed at runtime | Auto-installed by `npx` when needed |
 
 ## API Scripts
 
