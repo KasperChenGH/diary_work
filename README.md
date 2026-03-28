@@ -294,17 +294,20 @@ Type `start` to see the main menu:
 
 ---
 
-### `project_setup` — First-time setup
+### `project_setup` — First-time setup (works after fresh clone)
 
-Type `project_setup` for guided installation. Claude walks you through 4 phases:
+Type `project_setup` for guided installation. Claude handles everything automatically — including post-clone environment setup:
 
+0. **Environment setup** — Creates `.env` from `.env.example`, creates missing directories (`journal/entries/`, `findings/`), creates `.claude/settings.local.json` if needed
 1. **System check** — Verifies Python 3.6+ and Node.js/npm are installed
-2. **Dependencies** — Runs `pip install -r requirements.txt`
+2. **Dependencies** — Runs `pip install -r requirements.txt` and verifies
 3. **API keys** — Asks for each key one by one, with instructions on where to find them:
    - Notion API secret
    - Zotero API key + user ID
    - Obsidian Local REST API key
 4. **Connection test** — Tests each service and reports what's working
+
+**After cloning, just open Claude Code and type `project_setup` — that's it.** Claude will detect what's missing and set everything up.
 
 ---
 

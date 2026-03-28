@@ -105,11 +105,13 @@ Daily_Agent/
    Claude 會先載入過去的學習紀錄，再顯示選單讓你選擇。
 
 🟢 project_setup — 專案初始設定
-   引導式設定流程，包含四個階段：
+   引導式設定流程，包含五個階段：
+   ⓪ 環境檔案建立（複製 .env、建立必要資料夾）
    ① 檢查系統環境（Python、Node.js）
    ② 安裝 Python 套件
    ③ 逐一設定 API 金鑰（Notion、Zotero、Obsidian）
    ④ 測試各服務連線狀態
+   💡 Clone 後第一次使用？直接輸入 project_setup 就好！
 
 🟢 past_record — 查看過去的日記紀錄
    瀏覽你的日記歷史（最近 150 筆）。
@@ -274,35 +276,42 @@ Daily_Agent/
 
 ### `project_setup`
 **Trigger:** User types "project_setup"
-**Action:** Full project setup — install dependencies, check system prerequisites, then configure API keys.
+**Action:** Full project setup — handles everything needed after a fresh clone, including environment setup, dependencies, API keys, and connection tests. Safe to run on an existing setup too (skips what's already done).
 
 **Steps:**
 
+**Phase 0 — Environment file setup (post-clone):**
+1. Check if `.env` exists. If not, copy from `.env.example`: `cp .env.example .env`
+2. Check if `.claude/settings.local.json` exists. If not, create it: `echo '{}' > .claude/settings.local.json`
+3. Check if `journal/entries/` directory exists. If not, create it: `mkdir -p journal/entries`
+4. Check if `findings/` directory exists. If not, create it: `mkdir -p findings`
+
 **Phase 1 — System prerequisites:**
-1. Check Python is installed (`python --version`, need 3.6+)
-2. Check Node.js/npm is installed (`node --version`, `npm --version`) — needed for Notion MCP
-3. Report any missing prerequisites and stop if critical ones are absent
+5. Check Python is installed (`python --version`, need 3.6+)
+6. Check Node.js/npm is installed (`node --version`, `npm --version`) — needed for Notion MCP
+7. Report any missing prerequisites and stop if critical ones are absent
 
 **Phase 2 — Install Python dependencies:**
-4. Run `pip install -r requirements.txt`
-5. Verify installation succeeded (import test)
+8. Run `pip install -r requirements.txt`
+9. Verify installation succeeded (import test: `python -c "import requests; import urllib3; print('OK')"`)
+
 
 **Phase 3 — API key setup:**
-6. Read current `.env` to see which keys are already filled
-7. For each empty key, ask the user with instructions on where to find it:
+10. Read current `.env` to see which keys are already filled
+11. For each empty key, ask the user with instructions on where to find it:
    - **NOTION_API_SECRET** — "Go to https://www.notion.so/my-integrations → select your integration → copy the Internal Integration Secret"
    - **ZOTERO_API_KEY** — "Go to https://www.zotero.org/settings/keys/new → create a key with read/write access → copy the key"
    - **ZOTERO_USER_ID** — "Go to https://www.zotero.org/settings/keys → your userID is the number shown on that page"
    - **OBSIDIAN_API_KEY** — "Open Obsidian �� Settings → Community Plugins → Local REST API → copy the API key"
-8. Skip keys that already have values (ask user if they want to update them)
-9. Write all values to `.env`
+12. Skip keys that already have values (ask user if they want to update them)
+13. Write all values to `.env`
 
 **Phase 4 — Connection tests:**
-10. Run a quick test for each service:
+14. Run a quick test for each service:
     - Zotero: `python zotero/api.py recent 1`
     - Obsidian: `python obsidian/api.py status`
     - Notion: try a simple MCP search
-11. Report which connections succeeded and which failed
+15. Report which connections succeeded and which failed
 
 ### `past_record`
 **Trigger:** User types "past_record"
