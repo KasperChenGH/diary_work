@@ -21,3 +21,7 @@ Capture their words, feelings, events, people mentioned, decisions made.
 NOT Claude's questions or analysis — just the user's diary content.]
 
 -->
+
+## 2026-03-29 早上 | 每日意圖 | 引導者
+
+早上吃了早餐。

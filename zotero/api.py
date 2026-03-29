@@ -19,23 +19,17 @@ import sys
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 BASE_URL = "https://api.zotero.org"
 
 
 def load_config():
-    """Load Zotero API credentials from .env file."""
-    env_path = Path(__file__).resolve().parent.parent / ".env"
-    config = {}
-    if env_path.exists():
-        for line in env_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                config[key.strip()] = value.strip()
-
-    api_key = config.get("ZOTERO_API_KEY") or os.environ.get("ZOTERO_API_KEY")
-    user_id = config.get("ZOTERO_USER_ID") or os.environ.get("ZOTERO_USER_ID")
+    """Load Zotero API credentials from environment."""
+    api_key = os.environ.get("ZOTERO_API_KEY")
+    user_id = os.environ.get("ZOTERO_USER_ID")
 
     if not api_key or not user_id:
         print("ERROR: ZOTERO_API_KEY and ZOTERO_USER_ID must be set in .env or environment.")
@@ -56,7 +50,7 @@ def _headers(api_key):
 def _get(api_key, user_id, endpoint, params=None):
     """Make a GET request to the Zotero API."""
     url = f"{BASE_URL}/users/{user_id}{endpoint}"
-    resp = requests.get(url, headers=_headers(api_key), params=params or {})
+    resp = requests.get(url, headers=_headers(api_key), params=params or {}, timeout=30)
     resp.raise_for_status()
     return resp.json()
 
@@ -90,31 +84,73 @@ def get_item(item_key):
 
 
 def get_annotations(item_key):
-    """Get all annotations (highlights, notes) for an item's children."""
+    """Get all annotations (highlights, notes) for an item.
+
+    Checks two levels:
+    1. Direct children of the item (top-level notes)
+    2. Children of any PDF attachments (actual PDF highlights & inline notes)
+
+    Returns a list sorted by page number, with attachment_key included so
+    callers can build zotero://open-pdf deep links.
+    """
     api_key, user_id = load_config()
     children = _get(api_key, user_id, f"/items/{item_key}/children", {"format": "json"})
     annotations = []
+
     for child in children:
         data = child.get("data", {})
         item_type = data.get("itemType", "")
+
         if item_type == "annotation":
+            # Direct annotation child (rare but possible)
             annotations.append({
                 "type": data.get("annotationType", ""),
                 "text": data.get("annotationText", ""),
                 "comment": data.get("annotationComment", ""),
                 "color": data.get("annotationColor", ""),
                 "page": data.get("annotationPageLabel", ""),
-                "position": data.get("annotationPosition", ""),
+                "attachment_key": child.get("key", ""),
             })
+
         elif item_type == "note":
+            # Top-level note attached to the item
             annotations.append({
                 "type": "note",
                 "text": data.get("note", ""),
                 "comment": "",
                 "color": "",
                 "page": "",
-                "position": "",
+                "attachment_key": "",
             })
+
+        elif item_type == "attachment":
+            # Dig into PDF attachment for highlights / inline notes
+            att_key = child["key"]
+            try:
+                pdf_children = _get(api_key, user_id, f"/items/{att_key}/children", {"format": "json"})
+            except Exception:
+                continue
+            for ann in pdf_children:
+                ann_data = ann.get("data", {})
+                if ann_data.get("itemType") == "annotation":
+                    annotations.append({
+                        "type": ann_data.get("annotationType", ""),
+                        "text": ann_data.get("annotationText", ""),
+                        "comment": ann_data.get("annotationComment", ""),
+                        "color": ann_data.get("annotationColor", ""),
+                        "page": ann_data.get("annotationPageLabel", ""),
+                        "attachment_key": att_key,
+                        "annotation_key": ann["key"],
+                    })
+
+    # Sort by page number (non-numeric pages sort to end)
+    def _page_sort(a):
+        try:
+            return int(a.get("page") or 9999)
+        except ValueError:
+            return 9999
+
+    annotations.sort(key=_page_sort)
     return annotations
 
 
@@ -133,7 +169,7 @@ def get_collections():
     ]
 
 
-def get_items_in_collection(collection_key, limit=25):
+def get_items_in_collection(collection_key, limit=100):
     """Get items in a specific collection."""
     api_key, user_id = load_config()
     items = _get(api_key, user_id, f"/collections/{collection_key}/items/top", {
@@ -163,14 +199,17 @@ def get_items_by_tag(tag, limit=25):
 
 # --- Formatting Helpers ---
 
-def _format_item(item):
-    """Format a Zotero item into a clean summary dict."""
-    data = item.get("data", {})
-    creators = data.get("creators", [])
-    authors = ", ".join(
+def _parse_authors(creators):
+    return ", ".join(
         f"{c.get('lastName', '')}, {c.get('firstName', '')}" if c.get("lastName") else c.get("name", "")
         for c in creators
     )
+
+
+def _format_item(item):
+    """Format a Zotero item into a clean summary dict."""
+    data = item.get("data", {})
+    authors = _parse_authors(data.get("creators", []))
     return {
         "key": data.get("key", ""),
         "title": data.get("title", ""),
@@ -187,11 +226,7 @@ def _format_item(item):
 def _format_item_full(item):
     """Format a Zotero item with all details."""
     data = item.get("data", {})
-    creators = data.get("creators", [])
-    authors = ", ".join(
-        f"{c.get('lastName', '')}, {c.get('firstName', '')}" if c.get("lastName") else c.get("name", "")
-        for c in creators
-    )
+    authors = _parse_authors(data.get("creators", []))
     return {
         "key": data.get("key", ""),
         "title": data.get("title", ""),

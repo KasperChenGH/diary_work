@@ -104,7 +104,7 @@ Elicit (manual) → Zotero (source library)
 **Fully automatic pipeline — user gives a topic, agent handles everything:**
 
 1. **Load context** — Read `journal/research_questions.md` for open questions. If relevant open questions exist, mention them and ask if user wants to continue one
-2. **Search** — `python zotero/api.py search "topic"` → find relevant papers
+2. **Find papers** — `python zotero/api.py collections` → find matching collection key → `python zotero/api.py collection KEY`. Fall back to `python zotero/api.py search "topic"` only if no matching collection exists.
 3. **Pull details** — `python zotero/api.py item KEY` + `python zotero/api.py annotations KEY` → get metadata, highlights, notes for each paper
 4. **Create literature notes** — `python obsidian/api.py create ...` using `create_literature_note()` → structured notes with frontmatter, highlights, research sections
 5. **Cross-paper comparison** — After collecting all papers, synthesize:
@@ -118,7 +118,7 @@ Elicit (manual) → Zotero (source library)
    - List of all papers found (title, authors, year, DOI, tags, status)
    - Connections, patterns, and **research gaps**
    - **If Notion fails** → save to `findings/[YYYY-MM-DD]_<topic>.md` as fallback (same content, standardized naming)
-   - Filename = user's topic, sanitised (e.g., `findings/transformer_architectures.md`)
+   - Filename = date prefix + topic sanitised (e.g., `findings/2026-03-28_transformer_architectures.md`)
 7. **Present findings** — summarise to user: key themes, notable papers, cross-paper insights, research gaps
 8. **Writing support** — After presenting findings, offer:
    - Literature review summary (structured academic summary of findings)

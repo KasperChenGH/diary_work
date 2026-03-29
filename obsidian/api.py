@@ -24,6 +24,9 @@ import urllib3
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # Suppress InsecureRequestWarning for self-signed cert
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -33,19 +36,10 @@ DEFAULT_PORT = "27124"
 
 
 def load_config():
-    """Load Obsidian REST API credentials from .env file."""
-    env_path = Path(__file__).resolve().parent.parent / ".env"
-    config = {}
-    if env_path.exists():
-        for line in env_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                config[key.strip()] = value.strip()
-
-    api_key = config.get("OBSIDIAN_API_KEY") or os.environ.get("OBSIDIAN_API_KEY")
-    host = config.get("OBSIDIAN_HOST") or os.environ.get("OBSIDIAN_HOST") or DEFAULT_HOST
-    port = config.get("OBSIDIAN_PORT") or os.environ.get("OBSIDIAN_PORT") or DEFAULT_PORT
+    """Load Obsidian REST API credentials from environment."""
+    api_key = os.environ.get("OBSIDIAN_API_KEY")
+    host = os.environ.get("OBSIDIAN_HOST") or DEFAULT_HOST
+    port = os.environ.get("OBSIDIAN_PORT") or DEFAULT_PORT
 
     if not api_key:
         print("ERROR: OBSIDIAN_API_KEY must be set in .env or environment.")
@@ -66,7 +60,7 @@ def _request(method, endpoint, api_key, base_url, data=None, content_type="appli
     """Make a request to the Obsidian Local REST API."""
     url = f"{base_url}{endpoint}"
     headers = _headers(api_key, content_type)
-    resp = requests.request(method, url, headers=headers, data=data, verify=False)
+    resp = requests.request(method, url, headers=headers, data=data, verify=False, timeout=30)
     resp.raise_for_status()
     return resp
 
@@ -163,7 +157,7 @@ def create_literature_note(folder, item_data, annotations=None):
         annotations: List of dicts from zotero api.get_annotations()
     """
     title = item_data.get("title", "Untitled")
-    safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in title)[:80]
+    safe_title = title.replace(":", "_").replace("/", "_")[:80].rstrip()
     filename = f"{folder.rstrip('/')}/{safe_title}.md"
 
     # Build frontmatter

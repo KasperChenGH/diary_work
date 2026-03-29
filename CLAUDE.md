@@ -131,6 +131,10 @@ Daily_Agent/
 **Trigger:** User types "start"
 **Action:** Present the workflow picker. (Memory/knowledge already loaded at session start — see "On Every Session Start" above.)
 
+**Memory split — which system to use:**
+- `overall_memory.md` + `overall_knowledge.md` — workflow bugs, tool quirks, API behaviour, pipeline decisions (project-specific, lives in this repo)
+- `~/.claude/projects/.../memory/` — user preferences, habits, cross-project facts (Claude Code-level, persists across all projects)
+
 **On every session end (user says goodbye, exits, or conversation wraps up):**
 1. Reflect on what was learned this session
 2. Append to `overall_memory.md` if any of these occurred:
@@ -245,7 +249,7 @@ Daily_Agent/
 4. If connected, ask: `學術工作流已啟動！請告訴我你想研究什麼主題？`
    - If there are open research questions, mention them: "你之前有這些未解的研究問題：[list]. 要繼續其中一個嗎？"
 5. Once user gives a topic/query, **run the full pipeline automatically — no sub-menus, no confirmations:**
-   - Search Zotero for relevant papers (`zotero/api.py search`)
+   - **Find papers via collection first:** run `python zotero/api.py collections` → find the matching collection key → `python zotero/api.py collection KEY` to get all papers. Only fall back to `python zotero/api.py search "topic"` if no matching collection exists.
    - For each result, pull full details + annotations (`zotero/api.py item` + `annotations`)
    - Create structured literature notes in Obsidian (`obsidian/api.py create` / `create_literature_note()`)
    - **Cross-paper comparison:** After collecting all papers, synthesize across them:
@@ -262,6 +266,18 @@ Daily_Agent/
    - "需要我幫你寫研究摘要嗎？" — generate a structured summary suitable for literature review sections
    - "需要幫你整理成寫作大綱嗎？" — create an outline with argument structure, evidence mapping, and citation placement
    - If the user accepts, produce the draft in Traditional Chinese with proper academic style
+   - **Literature review summary structure:**
+     1. 研究背景與動機 — why this topic matters, what gap exists
+     2. 主要理論框架 — key theories and concepts across papers
+     3. 研究發現綜整 — what the papers collectively find (agree/disagree)
+     4. 方法論比較 — methodological differences and their implications
+     5. 研究缺口 — what remains unanswered, where future work is needed
+     6. 參考文獻列表 — APA format, sorted alphabetically
+   - **Outline structure:**
+     1. 論點主軸 — central argument or thesis
+     2. 段落拆解 — each paragraph: topic sentence + supporting papers (with citation keys) + transition
+     3. 證據配置 — which paper goes where, and why
+     4. 反駁與回應 — anticipated counterarguments and rebuttals
 7. **Update research questions:** Check `journal/research_questions.md`:
    - If the search answered or partially answered an existing question, update its status and add paper links
    - If new questions emerged during the search, add them as 🔴 open
@@ -364,6 +380,82 @@ Daily_Agent/
 - `daily` / `daily_append "content"`
 **Requires:** Obsidian running with Local REST API plugin
 **Special:** `create_literature_note()` in `obsidian/api.py` generates structured notes from Zotero data
+
+### Zotero → Obsidian → Notion Academic Pipeline
+
+**Full three-step pipeline for academic literature:**
+```
+Zotero (source + annotations)
+  → Obsidian PhD_vault/Research/Literature/ (literature notes)
+  → Notion 📚 研究文獻資料庫 (metadata + Obsidian deep links)
+```
+
+**Notion 📚 研究文獻資料庫**
+- Database ID: `329d3914-55cd-81af-8610-f2e645d9ba53`
+- Data source ID: `329d3914-55cd-812b-8239-000b9f8a15f1`
+- **Field mapping from Obsidian frontmatter:**
+
+| Obsidian field | Notion column | Type |
+|---|---|---|
+| `title` | `文獻標題` | title |
+| `author` | `作者` | text |
+| `year` | `年份` | number |
+| `## 摘要` section | `摘要` | text |
+| `tags` | `主題標籤` | multi_select |
+| `research_direction` | `研究方向` | select |
+| `zotero_key` | `Zotero Key` | text |
+| obsidian file path | `Obsidian連結` | url (obsidian:// deep link) |
+
+- **Obsidian deep link format:** `obsidian://open?vault=PhD_vault&file=Research%2FLiterature%2F[url-encoded-filename]`
+- **Integration:** "Diary" — must be connected to 📚 研究文獻資料庫 to update pages
+- **Sync strategy:** Match by `notion_id` in Obsidian YAML frontmatter → PATCH Notion page
+
+### Zotero → Obsidian Literature Note Workflow
+
+**When:** User asks to analyse a paper, a Zotero folder/collection, or sync Zotero annotations to Obsidian.
+
+**CRITICAL RULES — always follow these:**
+
+1. **Use collection key, not keyword search** to get all papers in a folder.
+   - Wrong: `python zotero/api.py search "Epistemic Agency"` (only finds papers whose *title* contains the term)
+   - Right: `python zotero/api.py collections` → find the collection key → `python zotero/api.py collection KEY`
+
+2. **Check PhD_vault FIRST before creating any note** to avoid duplicates.
+   - List existing notes: query `PhD_vault/Research/Literature/` via Obsidian API
+   - Match by `zotero_key` in YAML frontmatter, not by filename
+
+3. **Naming convention:** Use the Zotero **title** (truncated to ~80 chars), replacing `:` with `_` and `/` with `_`.
+   - Wrong: `KGMP5P52_Baze2025.md`
+   - Right: `"Okay we're doing my idea"_ how students enact epistemic agency and power in a d.md`
+
+4. **Template:** `PhD_vault/Templates/Zotero_Template.md` — read it before creating any note.
+
+5. **Annotations require two-level fetch** (fixed in `zotero/api.py` as of 2026-03-29):
+   - `python zotero/api.py annotations KEY` now automatically digs into PDF attachment children
+   - Returns highlights with `text`, `comment`, `page`, `attachment_key`, `annotation_key`
+   - Format highlights as:
+     ```
+     > [highlighted text] ([p.PAGE](zotero://open-pdf/library/items/ATTACHMENT_KEY?page=PAGE&annotation=ANN_KEY))
+
+     📝 筆記：[comment]
+     ```
+   - Format top-level notes as: `📝 [note text]`
+
+6. **Save location:** Always `PhD_vault/Research/Literature/` — never create a new top-level folder.
+
+7. **Synthesis notes:** Name as `_Synthesis_[Topic].md` (underscore prefix sorts to top).
+
+**Standard pipeline for a collection:**
+```
+1. python zotero/api.py collection COLLECTION_KEY     # get all papers
+2. List PhD_vault/Research/Literature/ files          # check existing notes
+3. For each paper:
+   a. python zotero/api.py annotations KEY            # get highlights + notes
+   b. If note exists → update 我的標註與筆記 section
+   c. If note missing → create using Zotero_Template
+4. Create _Synthesis_[Topic].md with cross-paper analysis
+5. Save synthesis to Notion (workspace level, not journal DB)
+```
 
 ### Heptabase
 **When:** User asks about visual thinking or Heptabase features — **reference only, cannot automate**

@@ -59,6 +59,10 @@
 - **Heptabase:** Beta Zotero integration
 - **API access:** Use Zotero Web API v3 for custom integrations and automation
 
+## Zotero → Obsidian via Claude (Established Workflow)
+
+**Full procedure documented in `CLAUDE.md` → "Zotero → Obsidian Literature Note Workflow"**
+
 ## Using the Zotero API
 - Get an API key at https://www.zotero.org/settings/keys/new
 - Find your userID at https://www.zotero.org/settings/keys

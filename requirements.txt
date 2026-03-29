@@ -3,6 +3,7 @@
 # --- Python packages ---
 requests>=2.31.0          # HTTP client for Zotero & Obsidian REST APIs
 urllib3>=2.0.0             # SSL/TLS handling (self-signed cert for Obsidian)
+python-dotenv>=1.0.0       # Load .env into os.environ automatically
 
 # --- Node.js / npm (required for MCP) ---
 # Node.js + npm/npx must be installed
